@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: puntos-lealtad-service
+
+  datasource:
+    url: jdbc:postgresql://ep-morning-darkness-anuujjzh-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require
+    username: neondb_owner
+    password: npg_f9SaWlHD4XqY
+    driverClassName: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+
+server:
+  port: 8081
+
+logging:
+  level:
+    root: INFO
+    com.lealtad: DEBUG
+    org.springframework.amqp: DEBUG
