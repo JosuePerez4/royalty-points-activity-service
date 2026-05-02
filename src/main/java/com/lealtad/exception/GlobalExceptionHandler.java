@@ -1,14 +1,17 @@
 package com.lealtad.exception;
 
-import com.lealtad.dto.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import com.lealtad.dto.ErrorResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
@@ -34,6 +37,20 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .codigo(HttpStatus.BAD_REQUEST.value())
                 .mensaje(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestParameter(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String mensaje = String.format("Falta el parámetro requerido '%s'", ex.getParameterName());
+        log.error("Parámetro faltante en la solicitud: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .codigo(HttpStatus.BAD_REQUEST.value())
+                .mensaje(mensaje)
                 .timestamp(LocalDateTime.now())
                 .path(request.getRequestURI())
                 .build();
