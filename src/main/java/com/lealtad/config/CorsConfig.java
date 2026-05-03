@@ -16,7 +16,7 @@ public class CorsConfig implements WebMvcConfigurer {
 
     public CorsConfig(
             @Value("${FRONTEND_CORS_PATTERNS:https://*.vercel.app,https://*.up.railway.app,http://localhost:*,http://127.0.0.1:*}") String patterns,
-            @Value("${FRONTEND_URL:}") String extraOrigins) {
+            @Value("${FRONTEND_URL:https://taller3-frontend-microservicios-production.up.railway.app}") String extraOrigins) {
         this.allowedOriginPatterns = mergeCsv(patterns, extraOrigins);
     }
 
