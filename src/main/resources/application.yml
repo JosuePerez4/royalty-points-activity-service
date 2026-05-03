@@ -1,5 +1,6 @@
-# Sin valores por defecto de infraestructura: todo viene del SO o del .env
-# (ver PuntosLealtadApplication.applyDotEnvIfAbsentFromEnvironment).
+# Sin valores por defecto de infraestructura: datasource/RabbitMQ/etc. vienen del SO o del .env
+# (ver PuntosLealtadApplication). En contenedores normalmente no hay .env: define las vars en el proveedor.
+# open-in-view tiene fallback false para no exigir otra variable solo en despliegue.
 # No declares aquí ${FRONTEND_CORS_PATTERNS:...}: puede producir referencia circular.
 
 spring:
@@ -16,7 +17,7 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
     show-sql: ${SPRING_JPA_SHOW_SQL}
-    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW}
+    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW:false}
     properties:
       hibernate:
         format_sql: true
