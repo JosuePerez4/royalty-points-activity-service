@@ -1,40 +1,40 @@
-# CORS (variables de entorno): patrones coma-separados + orígenes exactos opcionales
-FRONTEND_CORS_PATTERNS: "${FRONTEND_CORS_PATTERNS:https://*.vercel.app,https://*.up.railway.app,http://localhost:*,http://127.0.0.1:*}"
-FRONTEND_URL: "${FRONTEND_URL:}"
+# Sin valores por defecto de infraestructura: todo viene del SO o del .env
+# (ver PuntosLealtadApplication.applyDotEnvIfAbsentFromEnvironment).
+# No declares aquí ${FRONTEND_CORS_PATTERNS:...}: puede producir referencia circular.
 
 spring:
   application:
-    name: ${SPRING_APPLICATION_NAME:puntos-lealtad-service}
+    name: ${SPRING_APPLICATION_NAME}
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
 
   jpa:
-    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.PostgreSQLDialect}
     hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
-    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+    show-sql: ${SPRING_JPA_SHOW_SQL}
+    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW}
     properties:
       hibernate:
         format_sql: true
 
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST}
-    port: ${SPRING_RABBITMQ_PORT:5671}
+    port: ${SPRING_RABBITMQ_PORT}
     username: ${SPRING_RABBITMQ_USERNAME}
     password: ${SPRING_RABBITMQ_PASSWORD}
     virtual-host: ${SPRING_RABBITMQ_VIRTUAL_HOST}
     ssl:
-      enabled: ${SPRING_RABBITMQ_SSL_ENABLED:true}
+      enabled: ${SPRING_RABBITMQ_SSL_ENABLED}
 
 server:
-  port: ${PORT:${SERVER_PORT:8081}}
+  port: ${PORT:${SERVER_PORT}}
 
 logging:
   level:
-    root: ${LOGGING_LEVEL_ROOT:INFO}
-    com.lealtad: ${LOGGING_LEVEL_COM_LEALTAD:DEBUG}
-    org.springframework.amqp: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP:DEBUG}
+    root: ${LOGGING_LEVEL_ROOT}
+    com.lealtad: ${LOGGING_LEVEL_COM_LEALTAD}
+    org.springframework.amqp: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP}

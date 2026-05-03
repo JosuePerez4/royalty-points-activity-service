@@ -19,7 +19,21 @@
 
     <properties>
         <java.version>21</java.version>
+        <dotenv-java.version>3.1.0</dotenv-java.version>
+        <lombok.version>1.18.38</lombok.version>
     </properties>
+
+    <!-- Sobrescribe la versión del BOM de Spring Boot (sigue apareciendo como aviso en algunos IDE XML).
+         Maven resuelve lombok 1.18.38 y evita errores del procesador con JDK recientes. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Spring Boot Web -->
@@ -66,6 +80,13 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
 
+        <!-- Spring Boot no lee .env solo; cargamos antes del arranque (respeta vars del SO si ya existen) -->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>${dotenv-java.version}</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -79,16 +100,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.38</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <build>
         <plugins>
