@@ -194,17 +194,89 @@ actualiza el esquema al iniciar segun la entidad.
 
 Requisitos:
 
-- Java 17
+- Java 21
 - Maven Wrapper incluido (`./mvnw`)
 - PostgreSQL accesible
 - RabbitMQ accesible en `localhost:5672` o configurado mediante propiedades
 
-Configuracion por defecto:
+Configuracion:
 
-- Aplicacion: `puntos-lealtad-service`
-- Puerto HTTP: `8081`
-- RabbitMQ: host `localhost`, puerto `5672`, usuario `guest`
-- Perfil adicional disponible: `application-dev.yml`
+- El servicio no define valores por defecto para infraestructura en
+  `application.yml`; lee las propiedades desde variables de entorno o desde un
+  archivo `.env` local.
+- `PuntosLealtadApplication` busca `.env` desde el directorio de ejecucion hacia
+  arriba (hasta 8 niveles) y solo copia claves que no existan ya en el sistema.
+- En contenedores o PaaS, define las variables en el proveedor de despliegue en
+  vez de depender de `.env`.
+- Perfil adicional disponible: `application-dev.yml`; solo cambia `show-sql` y
+  sigue usando las mismas variables de infraestructura.
+
+### Variables de entorno
+
+Variables requeridas por `application.yml`:
+
+| Variable | Uso |
+| --- | --- |
+| `SPRING_APPLICATION_NAME` | Nombre de la aplicacion Spring. |
+| `SPRING_DATASOURCE_URL` | JDBC URL de PostgreSQL. |
+| `SPRING_DATASOURCE_USERNAME` | Usuario de PostgreSQL. |
+| `SPRING_DATASOURCE_PASSWORD` | Contrasena de PostgreSQL. |
+| `SPRING_DATASOURCE_DRIVER_CLASS_NAME` | Driver JDBC, normalmente `org.postgresql.Driver`. |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | Estrategia de esquema, por ejemplo `update`. |
+| `SPRING_JPA_SHOW_SQL` | `true` o `false` para imprimir SQL. |
+| `SPRING_RABBITMQ_HOST` | Host RabbitMQ. |
+| `SPRING_RABBITMQ_PORT` | Puerto RabbitMQ. |
+| `SPRING_RABBITMQ_USERNAME` | Usuario RabbitMQ. |
+| `SPRING_RABBITMQ_PASSWORD` | Contrasena RabbitMQ. |
+| `SPRING_RABBITMQ_VIRTUAL_HOST` | Virtual host RabbitMQ, por ejemplo `/`. |
+| `SPRING_RABBITMQ_SSL_ENABLED` | `true` o `false` para TLS con RabbitMQ. |
+| `SERVER_PORT` o `PORT` | Puerto HTTP. `PORT` tiene prioridad si existe. |
+| `LOGGING_LEVEL_ROOT` | Nivel de logs raiz, por ejemplo `INFO`. |
+| `LOGGING_LEVEL_COM_LEALTAD` | Nivel de logs del paquete del servicio. |
+| `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP` | Nivel de logs AMQP/Spring Rabbit. |
+
+`SPRING_JPA_OPEN_IN_VIEW` es opcional y usa `false` si no se define.
+
+Ejemplo local de `.env`:
+
+```dotenv
+SPRING_APPLICATION_NAME=puntos-lealtad-service
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/puntos_lealtad
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_JPA_SHOW_SQL=false
+SPRING_RABBITMQ_HOST=localhost
+SPRING_RABBITMQ_PORT=5672
+SPRING_RABBITMQ_USERNAME=guest
+SPRING_RABBITMQ_PASSWORD=guest
+SPRING_RABBITMQ_VIRTUAL_HOST=/
+SPRING_RABBITMQ_SSL_ENABLED=false
+SERVER_PORT=8081
+LOGGING_LEVEL_ROOT=INFO
+LOGGING_LEVEL_COM_LEALTAD=INFO
+LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP=INFO
+```
+
+### CORS para clientes web
+
+`CorsConfig` habilita CORS para todos los endpoints. Acepta patrones desde
+`FRONTEND_CORS_PATTERNS` y origenes adicionales desde `FRONTEND_URL`, ambos como
+listas separadas por comas.
+
+Valores por defecto:
+
+- Patrones: `https://*.vercel.app`, `https://*.up.railway.app`,
+  `http://localhost:*`, `http://127.0.0.1:*`
+- Origen adicional: `https://taller3-frontend-microservicios-production.up.railway.app`
+
+Ejemplo para un frontend especifico:
+
+```dotenv
+FRONTEND_CORS_PATTERNS=https://*.vercel.app,http://localhost:*
+FRONTEND_URL=https://mi-frontend.example.com
+```
 
 Para correr:
 
@@ -224,6 +296,14 @@ Para ejecutar pruebas unitarias:
 > fuera del control de versiones cuando aplique.
 
 ## Troubleshooting
+
+### La aplicacion no arranca por placeholders sin resolver
+
+Si Spring reporta que no puede resolver una propiedad como
+`${SPRING_DATASOURCE_URL}` o `${SPRING_RABBITMQ_HOST}`, falta definir una de las
+variables requeridas por `application.yml`. En local, crea un `.env` en el
+repositorio o en un directorio padre; en despliegues, configura las variables en
+el proveedor. Las variables del sistema operativo tienen prioridad sobre `.env`.
 
 ### El cliente no aparece despues de crearlo
 
