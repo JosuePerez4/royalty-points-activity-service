@@ -34,7 +34,9 @@ Componentes principales:
 
 ## Contrato HTTP
 
-El servicio escucha en el puerto `8081` por defecto.
+Los ejemplos usan `localhost:8081`. En ejecucion real el puerto lo define
+`PORT` o `SERVER_PORT`; si ninguna variable existe, la aplicacion no tiene un
+fallback local en `application.yml`.
 
 ### Health check
 
@@ -134,7 +136,9 @@ Restricciones:
 - El cliente debe existir.
 - El nivel se recalcula antes de persistir y devolver el saldo actualizado.
 
-Errores de validacion responden `400` con `ErrorResponse`.
+Errores de validacion responden `400` con `ErrorResponse`. Si falta el query
+param `cantidad`, `GlobalExceptionHandler` devuelve el mensaje
+`Falta el parametro requerido 'cantidad'`.
 
 ## Evento `cliente.creado`
 
@@ -165,7 +169,10 @@ Al procesarlo, el servicio crea un registro con:
 - `nivelLealtad`: `BRONZE`
 
 Si ya existe un registro para el mismo `cliente_id`, el listener registra el
-error de validacion y no crea un duplicado.
+error de validacion y no crea un duplicado. `EventoListener` captura
+`IllegalArgumentException` y excepciones inesperadas; al no relanzarlas, el
+metodo del listener termina y Spring AMQP considera el mensaje procesado. Esta
+aplicacion no configura reintentos ni DLQ propios para esos casos.
 
 ## Modelo de datos
 
@@ -187,24 +194,81 @@ Campos relevantes:
 | `fecha_creacion` | Fecha asignada en `@PrePersist` |
 | `fecha_ultima_actualizacion` | Fecha asignada en `@PrePersist` y `@PreUpdate` |
 
-La aplicacion usa `spring.jpa.hibernate.ddl-auto=update`, por lo que Hibernate
-actualiza el esquema al iniciar segun la entidad.
+La estrategia de esquema se controla con `SPRING_JPA_HIBERNATE_DDL_AUTO`.
+Usar `update` permite que Hibernate ajuste el esquema al iniciar segun la
+entidad, pero ese valor debe definirse explicitamente en el entorno.
 
 ## Configuracion local
 
 Requisitos:
 
-- Java 17
+- Java 21
 - Maven Wrapper incluido (`./mvnw`)
 - PostgreSQL accesible
-- RabbitMQ accesible en `localhost:5672` o configurado mediante propiedades
+- RabbitMQ accesible
 
-Configuracion por defecto:
+La configuracion de infraestructura es obligatoria y llega por variables de
+entorno o por un archivo `.env`. `PuntosLealtadApplication` busca `.env`
+subiendo desde `user.dir` hasta ocho niveles y lo carga antes de iniciar Spring;
+si una variable ya existe en el sistema operativo o como `System.getProperty`,
+no la sobrescribe. En contenedores y proveedores cloud normalmente conviene
+definir las variables en el proveedor, no montar un `.env`.
 
-- Aplicacion: `puntos-lealtad-service`
-- Puerto HTTP: `8081`
-- RabbitMQ: host `localhost`, puerto `5672`, usuario `guest`
-- Perfil adicional disponible: `application-dev.yml`
+Variables usadas por `application.yml`:
+
+| Variable | Uso |
+| --- | --- |
+| `SPRING_APPLICATION_NAME` | Nombre de la aplicacion Spring |
+| `SPRING_DATASOURCE_URL` | JDBC URL de PostgreSQL |
+| `SPRING_DATASOURCE_USERNAME` | Usuario de PostgreSQL |
+| `SPRING_DATASOURCE_PASSWORD` | Password de PostgreSQL |
+| `SPRING_DATASOURCE_DRIVER_CLASS_NAME` | Driver JDBC, normalmente `org.postgresql.Driver` |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | Estrategia de esquema (`validate`, `update`, etc.) |
+| `SPRING_JPA_SHOW_SQL` | Habilita/deshabilita SQL en logs |
+| `SPRING_JPA_OPEN_IN_VIEW` | Opcional; default `false` |
+| `SPRING_RABBITMQ_HOST` | Host de RabbitMQ |
+| `SPRING_RABBITMQ_PORT` | Puerto de RabbitMQ |
+| `SPRING_RABBITMQ_USERNAME` | Usuario de RabbitMQ |
+| `SPRING_RABBITMQ_PASSWORD` | Password de RabbitMQ |
+| `SPRING_RABBITMQ_VIRTUAL_HOST` | Virtual host de RabbitMQ |
+| `SPRING_RABBITMQ_SSL_ENABLED` | `true` si el broker exige TLS |
+| `PORT` o `SERVER_PORT` | Puerto HTTP |
+| `LOGGING_LEVEL_ROOT` | Nivel de log raiz |
+| `LOGGING_LEVEL_COM_LEALTAD` | Nivel de log del paquete `com.lealtad` |
+| `LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP` | Nivel de log de Spring AMQP |
+
+Ejemplo minimo para desarrollo local:
+
+```env
+SPRING_APPLICATION_NAME=puntos-lealtad-service
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/lealtad
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_JPA_SHOW_SQL=false
+SPRING_RABBITMQ_HOST=localhost
+SPRING_RABBITMQ_PORT=5672
+SPRING_RABBITMQ_USERNAME=guest
+SPRING_RABBITMQ_PASSWORD=guest
+SPRING_RABBITMQ_VIRTUAL_HOST=/
+SPRING_RABBITMQ_SSL_ENABLED=false
+SERVER_PORT=8081
+LOGGING_LEVEL_ROOT=INFO
+LOGGING_LEVEL_COM_LEALTAD=DEBUG
+LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_AMQP=INFO
+```
+
+Configuracion adicional:
+
+- Perfil `dev`: solo ajusta `spring.jpa.show-sql=false`; datasource y RabbitMQ
+  siguen viniendo de `application.yml` mas variables de entorno o `.env`.
+- CORS: `CorsConfig` acepta patrones desde `FRONTEND_CORS_PATTERNS` y origenes
+  extra desde `FRONTEND_URL`, ambos como CSV. Si no se definen, permite
+  `https://*.vercel.app`, `https://*.up.railway.app`, `http://localhost:*`,
+  `http://127.0.0.1:*` y el frontend Railway configurado en el codigo.
+- RabbitMQ SSL: habilita TLS con `SPRING_RABBITMQ_SSL_ENABLED=true` cuando el
+  broker lo requiera.
 
 Para correr:
 
@@ -219,9 +283,8 @@ Para ejecutar pruebas unitarias:
 ```
 
 > Nota: no copies credenciales reales en documentacion ni en ejemplos. Para
-> entornos locales o CI, sobrescribe `spring.datasource.*` y `spring.rabbitmq.*`
-> con propiedades de Spring Boot, variables de entorno o archivos de perfil
-> fuera del control de versiones cuando aplique.
+> entornos locales o CI, usa variables de entorno, secretos del proveedor o un
+> `.env` fuera del control de versiones.
 
 ## Troubleshooting
 
@@ -236,6 +299,23 @@ Verifica que el productor publique en:
 Tambien revisa que RabbitMQ este disponible y que la cola
 `puntos-lealtad-queue` exista; la aplicacion declara el exchange, la cola y el
 binding al iniciar.
+
+Si el listener recibe un evento duplicado o invalido, lo registra en logs y no
+relanza la excepcion. Sin una DLQ configurada fuera de este servicio, ese
+mensaje no queda pendiente para reintento desde esta aplicacion.
+
+### La aplicacion no arranca por placeholders sin resolver
+
+`application.yml` no incluye defaults para datasource, RabbitMQ, logs ni puerto.
+Define todas las variables listadas en "Configuracion local". Para desarrollo,
+un `.env` en la raiz del repo es suficiente si no hay variables del sistema con
+el mismo nombre.
+
+### Errores de CORS desde el frontend
+
+Agrega el origen exacto o un patron compatible en `FRONTEND_CORS_PATTERNS`, o
+usa `FRONTEND_URL` para un origen adicional. Ambos valores aceptan listas
+separadas por coma.
 
 ### Respuestas 404 al consultar puntos
 
